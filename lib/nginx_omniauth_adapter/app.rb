@@ -83,6 +83,10 @@ module NginxOmniauthAdapter
         session[:authorized_at] && Time.xmlschema(session[:authorized_at])
       end
 
+      def current_logged_in_at
+        session[:logged_in_at] && Time.xmlschema(session[:logged_in_at])
+      end
+
       def app_refresh_interval
         adapter_config[:app_refresh_interval] || (60 * 60 * 24)
       end
@@ -96,7 +100,7 @@ module NginxOmniauthAdapter
       end
 
       def adapter_authority_expired?
-        adapter_refresh_interval && current_user && (Time.now - current_authorized_at) > adapter_refresh_interval
+        adapter_refresh_interval && current_user && (Time.now - current_logged_in_at) > adapter_refresh_interval
       end
 
       def update_session!(auth = nil)
@@ -105,7 +109,7 @@ module NginxOmniauthAdapter
         end
 
         common_session = {
-          authorized_at: Time.now.xmlschema,
+          logged_in_at: session[:logged_in_at],
         }
 
         if auth
@@ -125,6 +129,7 @@ module NginxOmniauthAdapter
         app_session = common_session.merge(
           side: :app,
           back_to: session.delete(:back_to),
+          authorized_at: Time.now.xmlschema,
         )
 
         session.merge!(adapter_session)
@@ -228,7 +233,7 @@ module NginxOmniauthAdapter
       session[:app_callback] = sanitized_app_callback_param
       p [:auth, session]
 
-      if current_user
+      if current_user && !adapter_authority_expired?
         p [:auth, :update]
         update_session!
       else
@@ -238,6 +243,7 @@ module NginxOmniauthAdapter
     end
 
     omniauth_callback = proc do
+      session[:logged_in_at] = Time.now.xmlschema
       update_session! env['omniauth.auth']
     end
     get '/auth/:provider/callback', &omniauth_callback
