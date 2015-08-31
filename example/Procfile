@@ -1,0 +1,3 @@
+nginx: nginx -c `pwd`/nginx.conf
+adapter: bundle exec env NGINX_OAUTH2_ADAPTER_DEV=1 NGINX_OAUTH2_ADAPTER_HOST=http://ngx-auth.127.0.0.1.xip.io:18080 rackup -p 9292 -o 127.0.0.1 ../config.ru
+app: bundle exec ruby test_backend.rb -p 9293 -o 127.0.0.1
