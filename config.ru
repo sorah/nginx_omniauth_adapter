@@ -1,7 +1,15 @@
 require 'nginx_omniauth_adapter'
 require 'omniauth'
 
-dev = ENV['NGINX_OAUTH2_ADAPTER_DEV'] == '1'
+dev = ENV['NGINX_OAUTH2_ADAPTER_DEV'] == '1' || ENV['RACK_ENV'] == 'development'
+test = ENV['RACK_ENV'] == 'test'
+
+if test
+  dev = true
+  warn 'TEST MODE'
+  OmniAuth.config.test_mode = true
+  OmniAuth.config.mock_auth[:developer] = {provider: 'developer', uid: '42', info: {}}
+end
 
 if !dev && !ENV['NGINX_OAUTH2_ADAPTER_SESSION_SECRET']
   raise 'You should specify $NGINX_OAUTH2_ADAPTER_SESSION_SECRET'
