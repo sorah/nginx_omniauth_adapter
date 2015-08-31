@@ -11,6 +11,11 @@ get '/' do
   }.to_json
 end
 
+get '/hello' do
+  content_type :text
+  'hola'
+end
+
 get '/unauthorized' do
   [401, {'Content-Type' => 'text/plain'}, '401 :(']
 end
