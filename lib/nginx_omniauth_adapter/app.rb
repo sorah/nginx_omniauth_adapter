@@ -95,11 +95,11 @@ module NginxOmniauthAdapter
         adapter_config[:adapter_refresh_interval] || (60 * 60 * 24 * 30)
       end
 
-      def app_authority_expired?
+      def app_authorization_expired?
         app_refresh_interval && current_user && (Time.now - current_authorized_at) > app_refresh_interval
       end
 
-      def adapter_authority_expired?
+      def adapter_authorization_expired?
         adapter_refresh_interval && current_user && (Time.now - current_logged_in_at) > adapter_refresh_interval
       end
 
@@ -202,7 +202,7 @@ module NginxOmniauthAdapter
         halt 401
       end
 
-      if app_authority_expired?
+      if app_authorization_expired?
         halt 401
       end
 
@@ -233,7 +233,7 @@ module NginxOmniauthAdapter
       session[:app_callback] = sanitized_app_callback_param
       p [:auth, session]
 
-      if current_user && !adapter_authority_expired?
+      if current_user && !adapter_authorization_expired?
         p [:auth, :update]
         update_session!
       else
