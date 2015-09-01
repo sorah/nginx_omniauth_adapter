@@ -1,5 +1,7 @@
 require 'nginx_omniauth_adapter'
 require 'omniauth'
+require 'open-uri'
+require 'json'
 
 dev = ENV['NGX_OMNIAUTH_DEV'] == '1' || ENV['RACK_ENV'] == 'development'
 test = ENV['RACK_ENV'] == 'test'
@@ -37,13 +39,11 @@ use(
 
 providers = []
 
-use OmniAuth::Builder do
-  if dev
-    provider :developer
-    providers << :developer
-  end
+gh_teams = ENV['NGX_OMNIAUTH_GITHUB_TEAMS'] && ENV['NGX_OMNIAUTH_GITHUB_TEAMS'].split(/[, ]/)
 
+use OmniAuth::Builder do
   if ENV['NGX_OMNIAUTH_GITHUB_KEY'] && ENV['NGX_OMNIAUTH_GITHUB_SECRET']
+    require 'omniauth-github'
     gh_client_options = {}
     if ENV['NGX_OMNIAUTH_GITHUB_HOST']
       gh_client_options[:site] = "#{ENV['NGX_OMNIAUTH_GITHUB_HOST']}/api/v3"
@@ -52,15 +52,23 @@ use OmniAuth::Builder do
     end
 
     gh_scope = ''
-    # TODO:
+    if ENV['NGX_OMNIAUTH_GITHUB_TEAMS']
+      gh_scope = 'read:org'
+    end
 
     provider :github, ENV['NGX_OMNIAUTH_GITHUB_KEY'], ENV['NGX_OMNIAUTH_GITHUB_SECRET'], client_options: gh_client_options, scope: gh_scope
     providers << :github
   end
 
   if ENV['NGX_OMNIAUTH_GOOGLE_KEY'] && ENV['NGX_OMNIAUTH_GOOGLE_SECRET']
+    require 'omniauth-google-oauth2'
     provider :google_oauth2, ENV['NGX_OMNIAUTH_GOOGLE_KEY'], ENV['NGX_OMNIAUTH_GOOGLE_SECRET'], hd: ENV['NGX_OMNIAUTH_GOOGLE_HD']
     providers << :google_oauth2
+  end
+
+  if dev
+    provider :developer
+    providers << :developer
   end
 end
 
@@ -72,4 +80,27 @@ run NginxOmniauthAdapter.app(
   allowed_back_to_url: allowed_back_to_url,
   app_refresh_interval: ENV['NGX_OMNIAUTH_APP_REFRESH_INTERVAL'] && ENV['NGX_OMNIAUTH_APP_REFRESH_INTERVAL'].to_i,
   adapter_refresh_interval: ENV['NGX_OMNIAUTH_ADAPTER_REFRESH_INTERVAL'] && ENV['NGX_OMNIAUTH_APP_REFRESH_INTERVAL'].to_i,
+  policy_proc: proc {
+    if gh_teams && current_user[:provider] == 'github'
+      unless (current_user_data[:gh_teams] || []).any? { |team| gh_teams.include?(team) }
+        next false
+      end
+    end
+
+    true
+  },
+  on_login_proc: proc {
+    auth = env['omniauth.auth']
+    case auth[:provider]
+    when 'github'
+      if gh_teams
+        api_host = ENV['NGX_OMNIAUTH_GITHUB_HOST'] ? "#{ENV['NGX_OMNIAUTH_GITHUB_HOST']}/api/v3" : "https://api.github.com"
+        current_user_data[:gh_teams] = open("#{api_host}/user/teams", 'Authorization' => "token #{auth['credentials']['token']}") { |io|
+          JSON.parse(io.read).map {|_| "#{_['organization']['login']}/#{_['slug']}" }.select { |team| gh_teams.include?(team) }
+        }
+      end
+    end
+
+    true
+  },
 )

@@ -54,14 +54,26 @@ environment variable is available only on included config.ru (or Docker image).
 - `:allowed_back_to_url` `$NGX_OMNIAUTH_ALLOWED_BACK_TO_URL` (regexp): If specified, URL only matches to this are allowed for back_to url.
 - `:app_refresh_interval` `NGX_OMNIAUTH_APP_REFRESH_INTERVAL` (integer): Interval to require refresh session cookie on app domain (in second, default 1 day).
 - `:adapter_refresh_interval` `NGX_OMNIAUTH_ADAPTER_REFRESH_INTERVAL` (integer): Interval to require re-logging in on adapter domain (in second, default 3 days).
-- `$NGX_OMNIAUTH_SESSION_COOKIE_NAME`: session cookie name (default `ngx_oauth`)
-- `$NGX_OMNIAUTH_SESSION_COOKIE_TIMEOUT`: session cookie expiry (default 3 days)
-- `$NGX_OMNIAUTH_DEV=1` or `$RACK_ENV=development`
-  - enable dev mode (omniauth developer provider)
 
 ### Included config.ru (or Docker)
 
 You can set configuration via environment variables.
+
+The following variables are only available on included config.ru:
+
+- `$NGX_OMNIAUTH_SESSION_COOKIE_NAME`: session cookie name (default `ngx_oauth`)
+- `$NGX_OMNIAUTH_SESSION_COOKIE_TIMEOUT`: session cookie expiry (default 3 days)
+- `$NGX_OMNIAUTH_DEV=1` or `$RACK_ENV=development`
+  - enable dev mode (omniauth developer provider)
+- github provider
+  - `$NGX_OMNIAUTH_GITHUB_KEY`, `$NGX_OMNIAUTH_GITHUB_SECRET`: application key + secret.
+  - `$NGX_OMNIAUTH_GITHUB_HOST`: (optional) Set if you'd like to use GitHub Enterprise instance (e.g. `https://YOUR-GITHUB-ENTERPRISE`)
+  - `$NGX_OMNIAUTH_GITHUB_TEAMS`: (optional) Restrict to specified teams (e.g. `awesomeorganization/owners`)
+- google_oauth2 provider
+  - `$NGX_OMNIAUTH_GOOGLE_KEY`, `$NGX_OMNIAUTH_GOOGLE_SECRET`: oauth2 key + secret.
+  - `$NGX_OMNIAUTH_GOOGLE_HD`: (optional) Restrict to specified hosted domain (Google Apps Domain).
+
+
 
 ### Manually (Rack)
 

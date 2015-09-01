@@ -52,6 +52,14 @@ module NginxOmniauthAdapter
         adapter_config[:allowed_app_callback_url] || /./
       end
 
+      def on_login_proc
+        adapter_config[:on_login_proc] || proc { true }
+      end
+
+      def policy_proc
+        adapter_config[:policy_proc] || proc { true }
+      end
+
       def default_back_to
         # TODO:
         '/'
@@ -77,6 +85,10 @@ module NginxOmniauthAdapter
 
       def current_user
         session[:user]
+      end
+
+      def current_user_data
+        session[:user_data] ||= {}
       end
 
       def current_authorized_at
@@ -110,6 +122,7 @@ module NginxOmniauthAdapter
 
         common_session = {
           logged_in_at: session[:logged_in_at],
+          user_data: current_user_data,
         }
 
         if auth
@@ -206,6 +219,10 @@ module NginxOmniauthAdapter
         halt 401
       end
 
+      unless instance_eval(&policy_proc)
+        halt 403
+      end
+
       headers(
         'x-ngx-oauth-provider' => current_user[:provider],
         'x-ngx-oauth-user' => current_user[:uid],
@@ -243,6 +260,12 @@ module NginxOmniauthAdapter
     end
 
     omniauth_callback = proc do
+      session[:user_data] = {}
+
+      unless instance_eval(&on_login_proc)
+        halt 403, {'Content-Type' => 'text/plain'}, 'Forbidden (on_login_proc policy)'
+      end
+
       session[:logged_in_at] = Time.now.xmlschema
       update_session! env['omniauth.auth']
     end
