@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.authors       = ["Shota Fukumori (sora_h)"]
   spec.email         = ["her@sorah.jp"]
 
-  spec.summary       = %q{oauth2 adapter for ngx_http_auth_request_module}
+  spec.summary       = %q{omniauth adapter for ngx_http_auth_request_module}
   spec.homepage      = "https://github.com/sorah/nginx_omniauth_adapter"
   spec.license       = "MIT"
 
