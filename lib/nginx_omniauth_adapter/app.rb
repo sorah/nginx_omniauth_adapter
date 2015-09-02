@@ -6,7 +6,7 @@ require 'json'
 
 module NginxOmniauthAdapter
   class App < Sinatra::Base
-    CONTEXT_RACK_ENV_NAME = 'nginx-oauth2-adapter'.freeze
+    CONTEXT_RACK_ENV_NAME = 'nginx-omniauth-adapter'.freeze
     SESSION_PASS_CIPHER_ALGORITHM = 'aes-256-gcm'.freeze
 
     set :root, File.expand_path(File.join(__dir__, '..', '..', 'app'))
