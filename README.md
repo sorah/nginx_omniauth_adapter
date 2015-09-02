@@ -61,7 +61,7 @@ You can set configuration via environment variables.
 
 The following variables are only available on included config.ru:
 
-- `$NGX_OMNIAUTH_SESSION_COOKIE_NAME`: session cookie name (default `ngx_oauth`)
+- `$NGX_OMNIAUTH_SESSION_COOKIE_NAME`: session cookie name (default `ngx_omniauth`)
 - `$NGX_OMNIAUTH_SESSION_COOKIE_TIMEOUT`: session cookie expiry (default 3 days)
 - `$NGX_OMNIAUTH_DEV=1` or `$RACK_ENV=development`
   - enable dev mode (omniauth developer provider)

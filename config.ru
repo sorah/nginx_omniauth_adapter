@@ -31,9 +31,9 @@ allowed_back_to_url      = if ENV['NGX_OMNIAUTH_ALLOWED_BACK_TO_URL']
 
 use(
   Rack::Session::Cookie,
-  key:          ENV['NGX_OMNIAUTH_SESSION_COOKIE_NAME'] || 'ngx_oauth',
+  key:          ENV['NGX_OMNIAUTH_SESSION_COOKIE_NAME'] || 'ngx_omniauth',
   expire_after: ENV['NGX_OMNIAUTH_SESSION_COOKIE_TIMEOUT'] ? ENV['NGX_OMNIAUTH_SESSION_COOKIE_TIMEOUT'].to_i : (60 * 60 * 24 * 3),
-  secret:       ENV['NGX_OMNIAUTH_SESSION_SECRET'] || 'ngx_oauth_secret_dev',
+  secret:       ENV['NGX_OMNIAUTH_SESSION_SECRET'] || 'ngx_omniauth_secret_dev',
   old_secret:   ENV['NGX_OMNIAUTH_SESSION_SECRET_OLD'],
 )
 
