@@ -100,15 +100,15 @@ run NginxOmniauthAdapter.app(
 4. _nginx_ handles 401 with `error_page`, so do internal redirection (`/_auth/initiate`)
 5. _nginx_ handles `/_auth/initiate`. It will be proxied to _adapter app_ `GET /initiate`.
   - Also _nginx_ passes some information for callback to _adapter app._
-  - `x-ngx-oauth-initiate-back-to` URL to back after logged in
-  - `x-ngx-oauth-initiate-callback` URL that proxies to _adapter app_ `/callback`. This must be same domain to _backend app_ for cookie.
+  - `x-ngx-omniauth-initiate-back-to` URL to back after logged in
+  - `x-ngx-omniauth-initiate-callback` URL that proxies to _adapter app_ `/callback`. This must be same domain to _backend app_ for cookie.
 6. _adapter app_ `GET /initiate` redirects to `/auth/:provider`.
 7. _Browser_ do some authenticate in _adapter app_ with Omniauth.
-8. _adapter app's_ omniauth callback sets valid session, then redirects to `/_auth/callback`, where specified at `x-ngx-oauth-initiate-callback`.
+8. _adapter app's_ omniauth callback sets valid session, then redirects to `/_auth/callback`, where specified at `x-ngx-omniauth-initiate-callback`.
   - _Adapter app_ gives GET parameter named `session` on redirect. It contains encrypted session.
 9. _nginx_ handles `/_auth/callback`. It will be proxied to _adapter app_ `/callback`.
   - This decrypts given encrypted session string and set to cookie.
-  - Then redirect to `x-ngx-oauth-initiate-back-to`.
+  - Then redirect to `x-ngx-omniauth-initiate-back-to`.
 10. _browser_ backs to URL where attempted to access first, at step 1.
 11. _nginx_ sends auth subrequest to _backend app_ `/test`.
 12. _backend app_ `/test` returns 200, because request has valid session cookie.

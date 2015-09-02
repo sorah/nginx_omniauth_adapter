@@ -224,9 +224,9 @@ module NginxOmniauthAdapter
       end
 
       headers(
-        'x-ngx-oauth-provider' => current_user[:provider],
-        'x-ngx-oauth-user' => current_user[:uid],
-        'x-ngx-oauth-info' => [current_user[:info].to_json].pack('m*'),
+        'x-ngx-omniauth-provider' => current_user[:provider],
+        'x-ngx-omniauth-user' => current_user[:uid],
+        'x-ngx-omniauth-info' => [current_user[:info].to_json].pack('m*'),
       )
 
       content_type :text
@@ -234,11 +234,11 @@ module NginxOmniauthAdapter
     end
 
     get '/initiate' do
-      back_to = URI.encode_www_form_component(request.env['HTTP_X_NGX_OAUTH_INITIATE_BACK_TO'])
-      callback = URI.encode_www_form_component(request.env['HTTP_X_NGX_OAUTH_INITIATE_CALLBACK'])
+      back_to = URI.encode_www_form_component(request.env['HTTP_X_NGX_OMNIAUTH_INITIATE_BACK_TO'])
+      callback = URI.encode_www_form_component(request.env['HTTP_X_NGX_OMNIAUTH_INITIATE_CALLBACK'])
 
       if back_to == '' || callback == '' || back_to.nil? || callback.nil?
-        halt 400, {'Content-Type' => 'text/plain'}, 'x-ngx-oauth-initiate-back-to and x-ngx-oauth-initiate-callback header are required'
+        halt 400, {'Content-Type' => 'text/plain'}, 'x-ngx-omniauth-initiate-back-to and x-ngx-omniauth-initiate-callback header are required'
       end
 
       redirect "#{adapter_host}/auth?back_to=#{back_to}&callback=#{callback}"
