@@ -3,6 +3,7 @@ require 'uri'
 require 'time'
 require 'openssl'
 require 'json'
+require 'securerandom'
 
 module NginxOmniauthAdapter
   class App < Sinatra::Base
@@ -60,13 +61,30 @@ module NginxOmniauthAdapter
         adapter_config[:policy_proc] || proc { true }
       end
 
+      def log(h={})
+        h = {
+          time: Time.now.xmlschema,
+          severity: :info,
+          logged_in: (!!current_user).inspect,
+          provider: current_user && current_user[:provider],
+          uid: current_user && current_user[:uid],
+          flow_id: current_flow_id,
+        }.merge(h)
+
+        str = h.map { |*kv| kv.join(?:) }.join(?\t)
+
+        puts str
+        if h[:severity] == :warning || h[:severity] == :error
+          $stderr.puts str
+        end
+      end
+
       def default_back_to
         # TODO:
         '/'
       end
 
       def sanitized_back_to_param
-        p params[:back_to]
         if allowed_back_to_url === params[:back_to]
           params[:back_to]
         else
@@ -75,12 +93,19 @@ module NginxOmniauthAdapter
       end
 
       def sanitized_app_callback_param
-        p params[:callback]
         if allowed_app_callback_url === params[:callback]
           params[:callback]
         else
           nil
         end
+      end
+
+      def set_flow_id!
+        session[:flow_id] = SecureRandom.uuid
+      end
+
+      def current_flow_id
+        session[:flow_id]
       end
 
       def current_user
@@ -117,6 +142,7 @@ module NginxOmniauthAdapter
 
       def update_session!(auth = nil)
         unless session[:app_callback]
+          log severity: :error, message: 'missing app_callback'
           raise '[BUG] app_callback is missing'
         end
 
@@ -148,7 +174,12 @@ module NginxOmniauthAdapter
         session.merge!(adapter_session)
 
         session_param = encrypt_session_param(app_session)
+
+        log(message: 'update_session', app_callback: session[:app_callback])
+
         redirect "#{session.delete(:app_callback)}?session=#{session_param}"
+      ensure
+        session[:flow_id] = nil
       end
 
       def secret_key
@@ -212,10 +243,12 @@ module NginxOmniauthAdapter
 
     get '/test' do
       unless current_user
+        log(message: 'test_not_logged_in', original_uri: request.env['HTTP_X_NGX_OMNIAUTH_ORIGINAL_URI'])
         halt 401
       end
 
       if app_authorization_expired?
+        log(message: 'test_app_authorization_expired', original_uri: request.env['HTTP_X_NGX_OMNIAUTH_ORIGINAL_URI'])
         halt 401
       end
 
@@ -238,38 +271,46 @@ module NginxOmniauthAdapter
       callback = URI.encode_www_form_component(request.env['HTTP_X_NGX_OMNIAUTH_INITIATE_CALLBACK'])
 
       if back_to == '' || callback == '' || back_to.nil? || callback.nil?
+        log(severity: :error, message: 'initiate_no_required_params', back_to: back_to, callback: callback)
         halt 400, {'Content-Type' => 'text/plain'}, 'x-ngx-omniauth-initiate-back-to and x-ngx-omniauth-initiate-callback header are required'
       end
+
+      log(message: 'initiate', adapter_host: adapter_host, back_to: back_to, callback: callback)
 
       redirect "#{adapter_host}/auth?back_to=#{back_to}&callback=#{callback}"
     end
 
     get '/auth' do
+      set_flow_id!
+
       # TODO: choose provider
       session[:back_to] = sanitized_back_to_param
       session[:app_callback] = sanitized_app_callback_param
 
       if session[:back_to] == '' || session[:app_callback] == '' || session[:back_to].nil? || session[:app_callback].nil?
+        log(severity: :error, message: 'auth_invalid_params', back_to: params[:back_to], callback: params[:callback])
         halt 400, {'Content-Type' => 'text/plain'}, 'back_to or/and app_callback is invalid'
       end
 
-      p [:auth, session]
-
       if current_user && !adapter_authorization_expired?
-        p [:auth, :update]
+        log(message: 'auth_refresh_app', back_to: params[:back_to], callback: params[:callback])
         update_session!
       else
-        p [:auth, :redirect]
+        log(message: 'auth', provider: providers[0], back_to: params[:back_to], callback: params[:callback])
         redirect "#{adapter_host}/auth/#{providers[0]}"
       end
     end
 
     omniauth_callback = proc do
+
       session[:user_data] = {}
 
       unless instance_eval(&on_login_proc)
+        log(severity: :warning, message: 'omniauth_callback_forbidden', new_uid: env['omniauth.auth'][:uid])
         halt 403, {'Content-Type' => 'text/plain'}, 'Forbidden (on_login_proc policy)'
       end
+
+      log(message: 'omniauth_callback', new_uid: env['omniauth.auth'][:uid])
 
       session[:logged_in_at] = Time.now.xmlschema
       update_session! env['omniauth.auth']
@@ -280,6 +321,7 @@ module NginxOmniauthAdapter
     get '/callback' do # app side
       app_session = decrypt_session_param(params[:session])
       session.merge!(app_session)
+      log(message: 'app_callback', back_to: session[:back_to])
       redirect session.delete(:back_to)
     end
   end
