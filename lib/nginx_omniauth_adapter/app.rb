@@ -248,6 +248,11 @@ module NginxOmniauthAdapter
       # TODO: choose provider
       session[:back_to] = sanitized_back_to_param
       session[:app_callback] = sanitized_app_callback_param
+
+      if session[:back_to] == '' || session[:app_callback] == '' || session[:back_to].nil? || session[:app_callback].nil?
+        halt 400, {'Content-Type' => 'text/plain'}, 'back_to or/and app_callback is invalid'
+      end
+
       p [:auth, session]
 
       if current_user && !adapter_authorization_expired?
