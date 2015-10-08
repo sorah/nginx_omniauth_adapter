@@ -94,7 +94,7 @@ run NginxOmniauthAdapter.app(
 
 ## How it works
 
-![](http://img.sorah.jp/2015-10-08_22.53_wea7s.png)
+![](http://img.sorah.jp/2015-10-08_22.55_2s4hy.png)
 
 1. _browser_ access to restricted area (where `auth_request` has enabled)
 2. _nginx_ sends subrequest to `/_auth/challenge`. It will be proxied to _adapter app_ (`GET /test`)
