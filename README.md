@@ -94,6 +94,8 @@ run NginxOmniauthAdapter.app(
 
 ## How it works
 
+![](http://img.sorah.jp/2015-10-08_22.53_wea7s.png)
+
 1. _browser_ access to restricted area (where `auth_request` has enabled)
 2. _nginx_ sends subrequest to `/_auth/challenge`. It will be proxied to _adapter app_ (`GET /test`)
 3. _adapter app_ `/test` returns 401 when _request (browser)_ doesn't have valid cookie
