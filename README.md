@@ -1,5 +1,7 @@
 # NginxOmniauthAdapter - Use omniauth for nginx `auth_request` 
 
+[![Circle CI](https://circleci.com/gh/sorah/nginx_omniauth_adapter.svg?style=svg)](https://circleci.com/gh/sorah/nginx_omniauth_adapter)
+
 Use [omniauth](https://github.com/intridea/omniauth) for your nginx's authentication via ngx_http_auth_request_module.
 
 NginxOmniauthAdapter provides small Rack app (built with Sinatra) for `auth_request`.
@@ -40,7 +42,12 @@ Then write `config.ru` then deploy it. (see ./config.ru for example)
 
 ### Using docker
 
-TBD
+- Prebuilt: https://quay.io/repository/sorah/nginx_omniauth_adapter
+  - Own your risk.
+  - They're built at circleci
+- Build manually: checkout this repo and run `docker build .`.
+  - Much safer.
+  - But if you can't trust upstream image `quay.io/sorah/rbenv:2.2`, write your own Dockerfile. This is just a simple Rack app.
 
 ## Configuration
 
