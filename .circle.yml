@@ -1,0 +1,21 @@
+machine:
+  services:
+    - docker
+  ruby:
+    version: 2.2.3
+
+dependencies:
+  cache_directories:
+    - bin
+  pre:
+    - if [ ! -d bin ]; then mkdir bin; fi
+    - if [ ! -x bin/git-set-mtime ]; then curl -o bin/git-set-mtime https://drone.io/github.com/rosylilly/git-set-mtime/files/artifacts/bin/linux_amd64/git-set-mtime && chmod +x bin/git-set-mtime; fi
+    - docker login -u "${DOCKER_USER}" -p "${DOCKER_PASSWORD}" -e "${DOCKER_EMAIL}" https://quay.io
+    - bin/git-set-mtime
+
+deployment:
+  production:
+    branch: master
+    commands:
+      - docker build -t quay.io/sorah/nginx_omniauth_adapter:latest .
+      - docker push quay.io/sorah/nginx_omniauth_adapter:latest
