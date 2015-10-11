@@ -15,7 +15,7 @@ describe "nginx_omniauth_helper integration" do
 
     skip "nginx required" unless system('nginx', '-V', err: spec_log, out: spec_log)
 
-    nginx_pid = spawn('nginx', '-c', File.join(example_dir, 'nginx.conf'))
+    nginx_pid = spawn('nginx', '-c', File.join(example_dir, 'nginx.conf'), out: spec_log, err: spec_log)
     backend_pid = spawn('ruby', File.join(example_dir, 'test_backend.rb'), '-p', '18082', '-o', '127.0.0.1', out: spec_log, err: spec_log)
 
     if ENV['ADAPTER_DOCKER']
