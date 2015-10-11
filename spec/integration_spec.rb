@@ -31,7 +31,7 @@ describe "nginx_omniauth_helper integration" do
       adapter_pid = spawn({'NGX_OMNIAUTH_HOST' => 'http://ngx-auth.127.0.0.1.xip.io:18080'}, 'rackup', '-p', '18081', '-o', '127.0.0.1', File.join(__dir__, '..', 'config.ru'), out: spec_log, err: spec_log)
     end
 
-    10.times do
+    100.times do
       begin
         open('http://127.0.0.1:18081/', 'r', &:read)
         break
@@ -41,7 +41,7 @@ describe "nginx_omniauth_helper integration" do
     end
     open('http://127.0.0.1:18081/', 'r', &:read)
 
-    10.times do
+    100.times do
       begin
         open('http://127.0.0.1:18082/hello', 'r', &:read)
         break
