@@ -10,10 +10,12 @@ describe "nginx_omniauth_helper integration" do
   example_dir = File.join(__dir__, '..', 'example')
 
   before(:all) do
-    skip "nginx required" unless system('nginx', '-V', err: IO::NULL, out: IO::NULL)
+    spec_log = open('/tmp/nginx_omniauth_helper.spec.log', 'a')
+
+    skip "nginx required" unless system('nginx', '-V', err: spec_log, out: spec_log)
 
     nginx_pid = spawn('nginx', '-c', File.join(example_dir, 'nginx.conf'))
-    backend_pid = spawn('ruby', File.join(example_dir, 'test_backend.rb'), '-p', '18082', '-o', '127.0.0.1', out: IO::NULL, err: IO::NULL)
+    backend_pid = spawn('ruby', File.join(example_dir, 'test_backend.rb'), '-p', '18082', '-o', '127.0.0.1', out: spec_log, err: spec_log)
 
     if ENV['ADAPTER_DOCKER']
       adapter_pid = spawn(
@@ -22,10 +24,10 @@ describe "nginx_omniauth_helper integration" do
         '--env', 'NGX_OMNIAUTH_HOST=http://ngx-auth.127.0.0.1.xip.io:18080',
         '-p', '18081:8080',
         ENV['ADAPTER_DOCKER'],
-        out: IO::NULL, err: $stderr
+        out: spec_log, err: spec_log
       )
     else
-      adapter_pid = spawn({'NGX_OMNIAUTH_HOST' => 'http://ngx-auth.127.0.0.1.xip.io:18080'}, 'rackup', '-p', '18081', '-o', '127.0.0.1', File.join(__dir__, '..', 'config.ru'), out: IO::NULL, err: $stderr)
+      adapter_pid = spawn({'NGX_OMNIAUTH_HOST' => 'http://ngx-auth.127.0.0.1.xip.io:18080'}, 'rackup', '-p', '18081', '-o', '127.0.0.1', File.join(__dir__, '..', 'config.ru'), out: spec_log, err: spec_log)
     end
 
     10.times do
