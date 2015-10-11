@@ -18,6 +18,7 @@ dependencies:
 test:
   override:
     - bundle exec env ADAPTER_DOCKER=quay.io/sorah/nginx_omniauth_adapter:${CIRCLE_SHA1} rspec spec/integration_spec.rb
+    - "echo '==== LOG ====' && cat /tmp/nginx_omniauth_helper.spec.log"
 
 deployment:
   production:
