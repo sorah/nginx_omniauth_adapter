@@ -34,7 +34,7 @@ describe "nginx_omniauth_helper integration" do
       begin
         open('http://127.0.0.1:18081/', 'r', &:read)
         break
-      rescue Errno::ECONNREFUSED
+      rescue Errno::ECONNREFUSED, Errno::ECONNRESET, EOFError
         sleep 0.2
       end
     end
@@ -43,7 +43,7 @@ describe "nginx_omniauth_helper integration" do
       begin
         open('http://127.0.0.1:18082/hello', 'r', &:read)
         break
-      rescue Errno::ECONNREFUSED
+      rescue Errno::ECONNREFUSED, Errno::ECONNRESET, EOFError
         sleep 0.2
       end
     end
