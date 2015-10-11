@@ -39,6 +39,7 @@ describe "nginx_omniauth_helper integration" do
         sleep 0.2
       end
     end
+    open('http://127.0.0.1:18081/', 'r', &:read)
 
     10.times do
       begin
@@ -48,6 +49,7 @@ describe "nginx_omniauth_helper integration" do
         sleep 0.2
       end
     end
+    open('http://127.0.0.1:18082/hello', 'r', &:read)
 
     spec_log.puts "============= TEST START"
     spec_log.flush
