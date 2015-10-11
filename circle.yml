@@ -13,10 +13,10 @@ dependencies:
     - if [ ! -x bin/git-set-mtime ]; then curl -o bin/git-set-mtime https://drone.io/github.com/rosylilly/git-set-mtime/files/artifacts/bin/linux_amd64/git-set-mtime && chmod +x bin/git-set-mtime; fi
     - docker login -u "${DOCKER_USER}" -p "${DOCKER_PASSWORD}" -e "${DOCKER_EMAIL}" https://quay.io
     - bin/git-set-mtime
+    - docker build -t quay.io/sorah/nginx_omniauth_adapter:${CIRCLE_SHA1} .
 
 test:
   override:
-    - docker build -t quay.io/sorah/nginx_omniauth_adapter:${CIRCLE_SHA1} .
     - bundle exec env ADAPTER_DOCKER=quay.io/sorah/nginx_omniauth_adapter:${CIRCLE_SHA1} rspec spec/integration_spec.rb
 
 deployment:
