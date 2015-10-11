@@ -14,9 +14,15 @@ dependencies:
     - docker login -u "${DOCKER_USER}" -p "${DOCKER_PASSWORD}" -e "${DOCKER_EMAIL}" https://quay.io
     - bin/git-set-mtime
 
+test:
+  override:
+    - docker build -t quay.io/sorah/nginx_omniauth_adapter:${CIRCLE_SHA1} .
+    - bundle exec env ADAPTER_DOCKER=quay.io/sorah/nginx_omniauth_adapter:${CIRCLE_SHA1} rspec spec/integration_spec.rb
+
 deployment:
   production:
     branch: master
     commands:
-      - docker build -t quay.io/sorah/nginx_omniauth_adapter:latest .
+      - docker tag -f quay.io/sorah/nginx_omniauth_adapter:${CIRCLE_SHA1} quay.io/sorah/nginx_omniauth_adapter:latest
+      - docker push quay.io/sorah/nginx_omniauth_adapter:${CIRCLE_SHA1}
       - docker push quay.io/sorah/nginx_omniauth_adapter:latest
