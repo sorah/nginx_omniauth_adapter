@@ -30,6 +30,15 @@ describe "nginx_omniauth_helper integration" do
 
     10.times do
       begin
+        open('http://127.0.0.1:18081/', 'r', &:read)
+        break
+      rescue Errno::ECONNREFUSED
+        sleep 0.2
+      end
+    end
+
+    10.times do
+      begin
         open('http://127.0.0.1:18082/hello', 'r', &:read)
         break
       rescue Errno::ECONNREFUSED
