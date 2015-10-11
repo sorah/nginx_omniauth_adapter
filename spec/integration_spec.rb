@@ -9,8 +9,9 @@ describe "nginx_omniauth_helper integration" do
 
   example_dir = File.join(__dir__, '..', 'example')
 
+  spec_log = open('/tmp/nginx_omniauth_helper.spec.log', 'a')
+
   before(:all) do
-    spec_log = open('/tmp/nginx_omniauth_helper.spec.log', 'a')
 
     skip "nginx required" unless system('nginx', '-V', err: spec_log, out: spec_log)
 
@@ -47,9 +48,14 @@ describe "nginx_omniauth_helper integration" do
         sleep 0.2
       end
     end
+
+    spec_log.puts "============= TEST START"
+    spec_log.flush
   end
 
   after(:all) do
+    spec_log.puts "============= TEST STOP"
+    spec_log.flush
     [nginx_pid, backend_pid, adapter_pid].each do |pid|
       begin
         Process.kill :TERM, pid
