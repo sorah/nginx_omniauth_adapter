@@ -4,6 +4,5 @@ source 'https://rubygems.org'
 gemspec
 
 gem 'omniauth-github'
-gem 'omniauth-google-oauth2'
-
+gem 'omniauth-google-oauth2', '>= 0.3.1'
 gem 'unicorn'
