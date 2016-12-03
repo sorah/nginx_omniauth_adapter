@@ -12,6 +12,7 @@ RUN cd /tmp && bundle install -j4 --path vendor/bundle --without 'development te
 WORKDIR /app
 ADD . /app
 RUN cp -a /tmp/.bundle /tmp/vendor /app/
+RUN rm -f /app/.ruby-version
 
 EXPOSE 8080
 ENV RACK_ENV=production
