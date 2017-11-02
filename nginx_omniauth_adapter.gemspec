@@ -20,6 +20,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "sinatra"
   spec.add_dependency "omniauth"
+  spec.add_dependency "jwt"
 
   spec.add_development_dependency "bundler"
   spec.add_development_dependency "rake"

@@ -5,10 +5,13 @@ require 'openssl'
 require 'json'
 require 'securerandom'
 
+require 'rack/utils'
+
+require 'nginx_omniauth_adapter/token'
+
 module NginxOmniauthAdapter
   class App < Sinatra::Base
     CONTEXT_RACK_ENV_NAME = 'nginx-omniauth-adapter'.freeze
-    SESSION_PASS_CIPHER_ALGORITHM = 'aes-256-gcm'.freeze
 
     set :root, File.expand_path(File.join(__dir__, '..', '..', 'app'))
 
@@ -43,6 +46,14 @@ module NginxOmniauthAdapter
 
       def providers
         adapter_config[:providers]
+      end
+
+      def jwt_cookie_name
+        adapter_config[:token_cookie_name] || 'ngxotoken'
+      end
+
+      def jwt_hmac_secret
+        adapter_config[:jwt_hmac_secret] || secret_key
       end
 
       def allowed_back_to_url
@@ -109,11 +120,42 @@ module NginxOmniauthAdapter
       end
 
       def current_user
+        current_jwt_user
+      end
+
+      def current_legacy_user
         session[:user]
       end
 
+      def jwt_string
+        request.env['HTTP_X_NGXO_TOKEN'] || request.env['HTTP_X_NGX_OMNIAUTH_TOKEN'] || request.cookies[jwt_cookie_name]
+      end
+
+      def master_request?
+        @master_request
+      end
+
+      def current_token
+        @token ||= if jwt_string
+          token, error = Token.decode(
+            jwt_string,
+            master: master_request?,
+            keys: {default: jwt_hmac_secret},
+          )
+          error ? nil : token
+        end
+      end
+
+      def secure_cookie?
+        adapter_config.fetch(:secure, request.ssl?)
+      end
+
+      def current_jwt_user
+        current_token && current_token.user
+      end
+
       def current_user_data
-        session[:user_data] ||= {}
+        @current_user_data ||= (current_token ? current_token.context : session[:user_data]) || {}
       end
 
       def current_authorized_at
@@ -133,11 +175,35 @@ module NginxOmniauthAdapter
       end
 
       def app_authorization_expired?
-        app_refresh_interval && current_user && (Time.now - current_authorized_at) > app_refresh_interval
+        app_refresh_interval && !current_jwt_user && current_user && (Time.now - current_authorized_at) > app_refresh_interval
       end
 
       def adapter_authorization_expired?
-        adapter_refresh_interval && current_user && (Time.now - current_logged_in_at) > adapter_refresh_interval
+        adapter_refresh_interval && !current_jwt_user && current_user && (Time.now - current_logged_in_at) > adapter_refresh_interval
+      end
+
+      def set_token(context: nil, user: , expires_in: nil)
+        token, token_string = Token.issue(
+          master: true,
+          key: jwt_hmac_secret,
+          expires_in: expires_in || adapter_refresh_interval,
+          user: user,
+          context: context,
+        )
+        @token = token
+        response.set_cookie(
+          jwt_cookie_name,
+          path: '/',
+          http_only: true,
+          expire_after: expires_in || adapter_refresh_interval,
+          secure: secure_cookie?,
+          value: token_string,
+        )
+      end
+
+      def jwt_migration!
+        if current_logged_in_at && current_legacy_user
+        session[:user] = nil
       end
 
       def update_session!(auth = nil)
@@ -146,102 +212,63 @@ module NginxOmniauthAdapter
           raise '[BUG] app_callback is missing'
         end
 
-        common_session = {
-          logged_in_at: session[:logged_in_at],
-          user_data: current_user_data,
-        }
-
         if auth
-          common_session[:user] = {
+          user = {
             uid: auth[:uid],
             info: auth[:info],
             provider: auth[:provider],
           }
+
+          set_token(
+            context: current_user_data,
+            user: user,
+          )
         else
-          common_session[:user] = session[:user]
+          user = current_user
         end
 
-        adapter_session = common_session.merge(
-          side: :adapter,
+        _, app_token = Token.issue(
+          master: false,
+          parent_id: current_jwt_user.id,
+          key: jwt_hmac_secret,
+          expires_in: app_refresh_interval,
+          user: user,
+          context: current_user_data,
         )
 
-        app_session = common_session.merge(
-          side: :app,
-          back_to: session.delete(:back_to),
-          authorized_at: Time.now.xmlschema,
-        )
-
-        session.merge!(adapter_session)
-
-        session_param = encrypt_session_param(app_session)
+        back_to = session.delete(:back_to)
+        signature = OpenSSL::HMAC.hexdigest("sha256", secret_key, "token:#{app_token}\nback_to:#{back_to}")
 
         log(message: 'update_session', app_callback: session[:app_callback])
 
-        redirect "#{session.delete(:app_callback)}?session=#{session_param}"
+        session.options[:drop] = true
+        redirect "#{session.delete(:app_callback)}?token=#{URI.encode_www_form_component(app_token)}&back_to=#{URI.encode_www_form_component(back_to)}&signature=#{signature}"
       ensure
         session[:flow_id] = nil
       end
 
       def secret_key
-        context[:secret_key] ||= begin
+        @secret_key ||= begin
           if adapter_config[:secret]
             adapter_config[:secret].unpack('m*')[0]
           else
-            cipher = OpenSSL::Cipher.new(SESSION_PASS_CIPHER_ALGORITHM)
             warn "WARN: :secret not set; generating randomly."
-            warn "      If you'd like to persist, set `openssl rand -base64 #{cipher.key_len}` . Note that you have to keep it secret."
+            warn "      If you'd like to persist, set `openssl rand -base64 512` . Note that you have to keep it secret."
 
-            OpenSSL::Random.random_bytes(cipher.key_len)
+            adapter_config[:secret] = OpenSSL::Random.random_bytes(512)
           end
         end
       end
-
-      def encrypt_session_param(session_param)
-        iv = nil
-        cipher ||= OpenSSL::Cipher.new(SESSION_PASS_CIPHER_ALGORITHM).tap do |c|
-          c.encrypt
-          c.key = secret_key
-          c.iv = iv = c.random_iv
-          c.auth_data = ''
-        end
-
-        plaintext = Marshal.dump(session_param)
-
-        ciphertext = cipher.update(plaintext)
-        ciphertext << cipher.final
-
-        URI.encode_www_form_component([{
-          "iv" => [iv].pack('m*'),
-          "data" => [ciphertext].pack('m*'),
-          "tag" => [cipher.auth_tag].pack('m*'),
-        }.to_json].pack('m*'))
-      end
-
-      def decrypt_session_param(raw_data)
-        data = JSON.parse(raw_data.unpack('m*')[0])
-
-        cipher ||= OpenSSL::Cipher.new(SESSION_PASS_CIPHER_ALGORITHM).tap do |c|
-          c.decrypt
-          c.key = secret_key
-          c.iv = data['iv'].unpack('m*')[0]
-          c.auth_data = ''
-          c.auth_tag = data['tag'].unpack('m*')[0]
-        end
-
-        plaintext = cipher.update(data['data'].unpack('m*')[0])
-        plaintext << cipher.final
-
-        Marshal.load(plaintext)
-      end
-
     end
 
     get '/' do
+      @master_request = true
       content_type :text
-      "NginxOmniauthAdapter #{NginxOmniauthAdapter::VERSION}"
+      "NginxOmniauthAdapter #{NginxOmniauthAdapter::VERSION}\n#{current_jwt_user.inspect}"
     end
 
     get '/test' do
+      session.options[:drop] = true
       unless current_user
         log(message: 'test_not_logged_in', original_uri: request.env['HTTP_X_NGX_OMNIAUTH_ORIGINAL_URI'])
         halt 401
@@ -267,8 +294,9 @@ module NginxOmniauthAdapter
     end
 
     get '/initiate' do
-      back_to = URI.encode_www_form_component(request.env['HTTP_X_NGX_OMNIAUTH_INITIATE_BACK_TO'])
-      callback = URI.encode_www_form_component(request.env['HTTP_X_NGX_OMNIAUTH_INITIATE_CALLBACK'])
+      session.options[:drop] = true
+      back_to = request.env['HTTP_X_NGX_OMNIAUTH_INITIATE_BACK_TO']
+      callback = request.env['HTTP_X_NGX_OMNIAUTH_INITIATE_CALLBACK']
 
       if back_to == '' || callback == '' || back_to.nil? || callback.nil?
         log(severity: :error, message: 'initiate_no_required_params', back_to: back_to, callback: callback)
@@ -277,20 +305,35 @@ module NginxOmniauthAdapter
 
       log(message: 'initiate', adapter_host: adapter_host, back_to: back_to, callback: callback)
 
-      redirect "#{adapter_host}/auth?back_to=#{back_to}&callback=#{callback}"
+      signature = OpenSSL::HMAC.hexdigest("sha256", secret_key, "back_to:#{back_to}\ncallback:#{callback}")
+
+      redirect "#{adapter_host}/auth?back_to=#{URI.encode_www_form_component(back_to)}&callback=#{URI.encode_www_form_component(callback)}&signature=#{signature}"
     end
 
     get '/auth' do
-      set_flow_id!
+      @master_request = true
+      #session.options[:drop] = true
 
       # TODO: choose provider
-      session[:back_to] = sanitized_back_to_param
-      session[:app_callback] = sanitized_app_callback_param
+      back_to = sanitized_back_to_param
+      app_callback = sanitized_app_callback_param
 
-      if session[:back_to] == '' || session[:app_callback] == '' || session[:back_to].nil? || session[:app_callback].nil?
+      signature = OpenSSL::HMAC.hexdigest("sha256", secret_key, "back_to:#{back_to}\ncallback:#{app_callback}")
+      if !Rack::Utils.secure_compare(params[:signature], signature)
+        log(severity: :error, message: 'auth_invalid_sign', back_to: params[:back_to], callback: params[:callback], signature: params[:signature], correct_signature: signature)
+        halt 400, {'Content-Type' => 'text/plain'}, 'signature mismatch'
+      end
+
+      if back_to == '' || app_callback == '' || back_to.nil? || app_callback.nil?
         log(severity: :error, message: 'auth_invalid_params', back_to: params[:back_to], callback: params[:callback])
         halt 400, {'Content-Type' => 'text/plain'}, 'back_to or/and app_callback is invalid'
       end
+
+      jwt_migration!
+      set_flow_id!
+
+      session[:back_to] =  back_to
+      session[:app_callback] = app_callback
 
       if current_user && !adapter_authorization_expired?
         log(message: 'auth_refresh_app', back_to: params[:back_to], callback: params[:callback])
@@ -302,6 +345,8 @@ module NginxOmniauthAdapter
     end
 
     omniauth_callback = proc do
+      @master_request = true
+      jwt_migration!
 
       session[:user_data] = {}
 
@@ -319,8 +364,26 @@ module NginxOmniauthAdapter
     post '/auth/:provider/callback', &omniauth_callback
 
     get '/callback' do # app side
-      app_session = decrypt_session_param(params[:session])
-      session.merge!(app_session)
+      session.options[:drop] = true
+
+      app_token = params[:token]
+      back_to = params[:back_to]
+
+      signature = OpenSSL::HMAC.hexdigest("sha256", secret_key, "token:#{app_token}\nback_to:#{back_to}")
+      if !Rack::Utils.secure_compare(params[:signature], signature)
+        log(severity: :error, message: 'app_callback_invalid_sign', back_to: params[:back_to], signature: params[:signature], correct_signature: signature)
+        halt 400, {'Content-Type' => 'text/plain'}, 'signature mismatch'
+      end
+
+      response.set_cookie(
+        jwt_cookie_name,
+        path: '/',
+        http_only: true,
+        expire_after: app_refresh_interval,
+        secure: secure_cookie?,
+        value: app_token,
+      )
+
       log(message: 'app_callback', back_to: session[:back_to])
       redirect session.delete(:back_to)
     end
