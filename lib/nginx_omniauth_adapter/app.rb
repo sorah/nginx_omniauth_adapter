@@ -259,7 +259,7 @@ module NginxOmniauthAdapter
       headers(
         'x-ngx-omniauth-provider' => current_user[:provider],
         'x-ngx-omniauth-user' => current_user[:uid],
-        'x-ngx-omniauth-info' => [current_user[:info].to_json].pack('m*'),
+        'x-ngx-omniauth-info' => [current_user[:info].to_json].pack('m0'),
       )
 
       content_type :text
