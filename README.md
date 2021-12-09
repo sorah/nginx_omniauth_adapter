@@ -54,7 +54,7 @@ Then write `config.ru` then deploy it. (see ./config.ru for example)
 environment variable is available only on included config.ru (or Docker image).
 
 - `:providers`: omniauth provider names.
-- `:provider_desired_http_header` `$NGX_OMNIAUTH_PROVIDER_DESIRED_HTTP_HEADER` (string): Name of HTTP header to specify desired OmniAuth provider (see below). Defaults to 'x-ngx-omniauth-provider-desired`.
+- `:provider_http_header` `$NGX_OMNIAUTH_PROVIDER_HTTP_HEADER` (string): Name of HTTP header to specify OmniAuth provider to be used (see below). Defaults to 'x-ngx-omniauth-provider`.
 - `:secret` `$NGX_OMNIAUTH_SESSION_SECRET`: Rack session secret. Should be set when not on dev mode
 - `:host` `$NGX_OMNIAUTH_HOST`: URL of adapter. This is used for redirection. Should include protocol (e.g. `http://example.com`.)
   - If this is not specified, adapter will perform redirect using given `Host` header.
@@ -66,7 +66,7 @@ environment variable is available only on included config.ru (or Docker image).
 ### Working with multiple OmniAuth providers
 
 When multiple providers are passed to `:providers`, nginx_omniauth_adapter defaults to the first one in list.
-Other providers in list will only be activated for requests with `x-ngx-omniauth-provider-desired` header (key is configurable via `:provider_desired_http_header`).
+Other providers in list will only be activated for requests with `x-ngx-omniauth-provider` header (key is configurable via `:provider_http_header`).
 
 ### Included config.ru (or Docker)
 
