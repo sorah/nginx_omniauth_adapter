@@ -7,7 +7,7 @@ get '/' do
   {
     provider: request.env['HTTP_X_NGX_OMNIAUTH_PROVIDER'],
     user: request.env['HTTP_X_NGX_OMNIAUTH_USER'],
-    info: JSON.parse(request.env['HTTP_X_NGX_OMNIAUTH_INFO'].unpack('m*')[0]),
+    info: JSON.parse(request.env['HTTP_X_NGX_OMNIAUTH_INFO'].unpack('m0')[0]),
   }.to_json
 end
 
