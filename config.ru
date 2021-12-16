@@ -74,6 +74,7 @@ end
 
 run NginxOmniauthAdapter.app(
   providers: providers,
+  provider_http_header: ENV['NGX_OMNIAUTH_PROVIDER_HTTP_HEADER'] || 'x-ngx-omniauth-provider',
   secret: ENV['NGX_OMNIAUTH_SECRET'],
   host: ENV['NGX_OMNIAUTH_HOST'],
   allowed_app_callback_url: allowed_app_callback_url,

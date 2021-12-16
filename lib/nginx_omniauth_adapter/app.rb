@@ -45,6 +45,10 @@ module NginxOmniauthAdapter
         adapter_config[:providers]
       end
 
+      def provider_http_header
+        adapter_config[:provider_http_header] || 'x-ngx-omniauth-provider'
+      end
+
       def allowed_back_to_url
         adapter_config[:allowed_back_to_url] || /./
       end
@@ -283,7 +287,18 @@ module NginxOmniauthAdapter
     get '/auth' do
       set_flow_id!
 
-      # TODO: choose provider
+      provider_requested = request.env["HTTP_#{provider_http_header.gsub('-', '_').upcase}"]
+      if provider_requested
+        if providers.include?(provider_requested.to_sym)
+          provider = provider_requested.to_sym
+        else
+          halt 401, {'Content-Type' => 'text/plain'}, 'requested provider not available'
+        end
+      else
+        # default to the first provider in list
+        provider = providers[0]
+      end
+
       session[:back_to] = sanitized_back_to_param
       session[:app_callback] = sanitized_app_callback_param
 
@@ -296,8 +311,8 @@ module NginxOmniauthAdapter
         log(message: 'auth_refresh_app', back_to: params[:back_to], callback: params[:callback])
         update_session!
       else
-        log(message: 'auth', provider: providers[0], back_to: params[:back_to], callback: params[:callback])
-        redirect "#{adapter_host}/auth/#{providers[0]}"
+        log(message: 'auth', provider: provider, back_to: params[:back_to], callback: params[:callback])
+        redirect "#{adapter_host}/auth/#{provider}"
       end
     end
 
