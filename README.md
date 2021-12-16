@@ -19,7 +19,7 @@ $ cd example/
 $ foreman start
 ```
 
-http://ngx-auth-test.127.0.0.1.xip.io:18080/
+http://ngx-auth-test.lo.nkmiusercontent.com:18080/
 
 (make sure to have nginx on your PATH)
 

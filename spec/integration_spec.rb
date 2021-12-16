@@ -22,13 +22,13 @@ describe "nginx_omniauth_helper integration" do
       adapter_pid = spawn(
         'docker', 'run',
         '--env', 'RACK_ENV=test',
-        '--env', 'NGX_OMNIAUTH_HOST=http://ngx-auth.127.0.0.1.xip.io:18080',
+        '--env', 'NGX_OMNIAUTH_HOST=http://ngx-auth.lo.nkmiusercontent.com:18080',
         '-p', '18081:8080',
         ENV['ADAPTER_DOCKER'],
         out: spec_log, err: spec_log
       )
     else
-      adapter_pid = spawn({'NGX_OMNIAUTH_HOST' => 'http://ngx-auth.127.0.0.1.xip.io:18080'}, 'rackup', '-p', '18081', '-o', '127.0.0.1', File.join(__dir__, '..', 'config.ru'), out: spec_log, err: spec_log)
+      adapter_pid = spawn({'NGX_OMNIAUTH_HOST' => 'http://ngx-auth.lo.nkmiusercontent.com:18080'}, 'rackup', '-p', '18081', '-o', '127.0.0.1', File.join(__dir__, '..', 'config.ru'), out: spec_log, err: spec_log)
     end
 
     100.times do
@@ -68,6 +68,6 @@ describe "nginx_omniauth_helper integration" do
   let(:agent) { Mechanize.new }
 
   it "can log in" do
-    expect(agent.get('http://ngx-auth-test.127.0.0.1.xip.io:18080/').body).to include('"42"')
+    expect(agent.get('http://ngx-auth-test.lo.nkmiusercontent.com:18080/').body).to include('"42"')
   end
 end
