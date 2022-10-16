@@ -9,7 +9,7 @@ describe "nginx_omniauth_helper integration" do
 
   example_dir = File.join(__dir__, '..', 'example')
 
-  spec_log = open('/tmp/nginx_omniauth_helper.spec.log', 'a')
+  spec_log = URI.open('/tmp/nginx_omniauth_helper.spec.log', 'a')
 
   before(:all) do
 
@@ -33,23 +33,23 @@ describe "nginx_omniauth_helper integration" do
 
     100.times do
       begin
-        open('http://127.0.0.1:18081/', 'r', &:read)
+        URI.open('http://127.0.0.1:18081/', 'r', &:read)
         break
       rescue Errno::ECONNREFUSED, Errno::ECONNRESET, EOFError
         sleep 0.2
       end
     end
-    open('http://127.0.0.1:18081/', 'r', &:read)
+    URI.open('http://127.0.0.1:18081/', 'r', &:read)
 
     100.times do
       begin
-        open('http://127.0.0.1:18082/hello', 'r', &:read)
+        URI.open('http://127.0.0.1:18082/hello', 'r', &:read)
         break
       rescue Errno::ECONNREFUSED, Errno::ECONNRESET, EOFError
         sleep 0.2
       end
     end
-    open('http://127.0.0.1:18082/hello', 'r', &:read)
+    URI.open('http://127.0.0.1:18082/hello', 'r', &:read)
 
     spec_log.puts "============= TEST START"
     spec_log.flush
