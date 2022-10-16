@@ -20,12 +20,12 @@ jobs:
       image: public.ecr.aws/sorah/ruby:${{ matrix.ruby-version }}-dev
     steps:
       - name: Cache bundled gems
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         id: rspec-bundle
         with:
           path: ~/bundle
           key: ${{ runner.os }}-${{ matrix.ruby-version }}
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v3
       - run: 'apt-get update && apt-get install -y --no-install-recommends nginx'
       - run: 'bundle install --path ~/bundle'
       - run: 'bundle exec rspec -fd'
