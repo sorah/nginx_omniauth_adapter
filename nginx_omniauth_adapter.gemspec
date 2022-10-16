@@ -19,7 +19,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "sinatra"
-  spec.add_dependency "omniauth"
+  spec.add_dependency "omniauth", '< 2'
 
   spec.add_development_dependency "bundler"
   spec.add_development_dependency "rake"
