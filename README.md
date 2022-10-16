@@ -1,6 +1,6 @@
 # NginxOmniauthAdapter - Use omniauth for nginx `auth_request` 
 
-[![Circle CI](https://circleci.com/gh/sorah/nginx_omniauth_adapter.svg?style=svg)](https://circleci.com/gh/sorah/nginx_omniauth_adapter)
+[![ci](https://github.com/sorah/nginx_omniauth_adapter/actions/workflows/ci.yml/badge.svg)](https://github.com/sorah/nginx_omniauth_adapter/actions/workflows/ci.yml)
 
 Use [omniauth](https://github.com/intridea/omniauth) for your nginx's authentication via ngx_http_auth_request_module.
 
