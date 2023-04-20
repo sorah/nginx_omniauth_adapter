@@ -1,10 +1,17 @@
 require 'nginx_omniauth_adapter'
 require 'omniauth'
+require 'omniauth/version'
 require 'open-uri'
 require 'json'
 
 dev = ENV['NGX_OMNIAUTH_DEV'] == '1' || ENV['RACK_ENV'] == 'development'
 test = ENV['RACK_ENV'] == 'test'
+
+# We intentionally allow GET for login, knowing CVE-2015-9284.
+OmniAuth.config.allowed_request_methods = [:get, :post]
+if Gem::Version.new(OmniAuth::VERSION) >= Gem::Version.new("2.0.0")
+  OmniAuth.config.silence_get_warning = true
+end
 
 if test
   dev = true
